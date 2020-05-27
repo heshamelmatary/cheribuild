@@ -31,14 +31,19 @@
 from .crosscompileproject import CrossCompileAutotoolsProject
 from .gdb import BuildGDB
 from ..project import *
+from .cheribsd import BuildCHERIBSD
 
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
 class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
+    #repository = GitRepository("https://github.com/riscv/riscv-pk.git")
         force_branch=True, default_branch="cheri_purecap",  # Compilation fixes for clang and support for CHERI
         old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
+        #per_target_branches={
+        #    CompilationTargets.CHERIBSD_RISCV_NO_CHERI: TargetBranchInfo("master", "riscv-pk")
+        #    })
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
@@ -68,6 +73,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         else:
             self.configureArgs.append("--with-abi=lp64")
             self.configureArgs.append("--with-arch=rv64imafdc")
+            self.configureArgs.append("--with-mem-start=" + self.mem_start)
 
         if self.build_type == BuildType.DEBUG:
             self.configureArgs.append("--enable-logo")  # For debugging
@@ -127,6 +133,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     target = "bbl-gfe"
     project_name = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
+    default_build_type = BuildType.DEBUG
 
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.cheri_sdk_dir / "bbl-gfe" / project.crosscompile_target.generic_suffix,
@@ -148,10 +155,23 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 #     kernel_class = BuildFreeBSDWithDefaultOptions
 #
 #
-# class BuildBBLCheriBSDRISCV(BuildBBLBase):
-#     project_name = "bbl"  # reuse same source dir
-#     target = "bbl-cheribsd"
-#     build_dir_suffix = "cheribsd"
-#     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
-#     kernel_class = BuildCHERIBSD
+class BuildBBLCheriBSDRISCVGFE(BuildBBLBase):
+     project_name = "bbl"  # reuse same source dir
+     target = "bbl-cheribsd-gfe"
+     mem_start = "0xc0000000"
+     dependencies = ["cheribsd"]
+     without_payload = False
+     build_dir_suffix = "-gfe"  # but not the build dir
+     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+     kernel_class = BuildCHERIBSD
 
+     #_default_install_dir_fn = ComputedDefaultValue(
+     #   function=lambda config, project: config.cheri_sdk_dir / "bbl-gfe" / project.crosscompile_target.generic_suffix,
+     #   as_string="$SDK_ROOT/bbl-gfe-/riscv{32,64}{c,-hybrid}")
+
+class BuildBBLCheriBSDRISCV(BuildBBLBase):
+     project_name = "bbl"  # reuse same source dir
+     target = "bbl-cheribsd"
+     build_dir_suffix = "cheribsd"
+     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+     kernel_class = BuildCHERIBSD

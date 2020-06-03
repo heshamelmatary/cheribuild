@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+import os
 from .crosscompileproject import CrossCompileAutotoolsProject
 from .gdb import BuildGDB
 from ..project import *
@@ -93,7 +94,11 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         else:
             # Add the kernel as a payload:
             assert self.kernel_class is not None
-            kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
+            if self.compiling_for_host():
+                kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
+            else:
+                kernel_path = os.getenv("WORKSPACE", ".") + "/kernel"
+
             self.configureArgs.append("--with-payload=" + str(kernel_path))
 
     def compile(self, **kwargs):

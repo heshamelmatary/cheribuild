@@ -80,8 +80,11 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             self.configureArgs.append("--enable-logo")  # For debugging
 
         # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
-        self.add_configure_and_make_env_arg("OBJCOPY",
-            BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
+        if self.compiling_for_host():
+            self.add_configure_and_make_env_arg("OBJCOPY",
+                BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
+        else:
+            self.add_configure_and_make_env_arg("OBJCOPY", self.sdk_bindir / "llvm-objcopy")
         # Otherwise use LLVM tools
         self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
         self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
